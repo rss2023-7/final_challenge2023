@@ -108,6 +108,7 @@ class TrackDriver:
         """
 
         drive_speed = current_speed
+        max_speed = 4
 
         # threshold for error above which speed is decreased and below whic
         # speed is increased
@@ -116,7 +117,7 @@ class TrackDriver:
         if error > threshold:
             drive_speed = 0.9 * current_speed
         elif error < threshold:
-            drive_speed = 1.1 * current_speed
+            drive_speed = min(1.1 * current_speed, max_speed)
 
         return drive_speed
 
