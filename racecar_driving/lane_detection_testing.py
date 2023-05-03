@@ -2,7 +2,7 @@
 
 import cv2
 import numpy as np
-
+import math
 
 
 def color_segmentation(img):
@@ -90,30 +90,97 @@ mask = cv2.inRange(hsv_image, lower_white, upper_white)
 result = cv2.bitwise_and(image, image, mask=mask)
 
 
-# crop the resulting image to only focus on the right half of the image and the bottom 65%
+# crop the resulting image to only focus on the right half of the image and the bottom 50%
 height, width, _ = result.shape
 result_cropped = result[int(height/2):height, int(width/2):width]
 
 
 hough_image = image.copy()
-preprocess_image = preprocess_image(hough_image)
-lines = detect_lane_lines(preprocess_image)
-if lines is not None:
-    for line in lines:
-        for x1, y1, x2, y2 in line:
-            hough_image = cv2.line(hough_image, (x1, y1), (x2, y2), (0, 0, 255), 5)
+#crop hough image to only focus on the right half of the image and the bottom 50%
+height, width, _ = hough_image.shape
+hough_image = hough_image[int(height/2):height, int(width/2):width]
 
-            #show the image with the lines drawn
-            cv2.imshow("lane lines", hough_image)
-            
+# Canny on original image
+canny_original = cv2.Canny(hough_image, 50, 200, None, 3)
 
 
-# Display the images
-cv2.imshow('Original Image', image)
-cv2.imshow('HSV Image', hsv_image)
-cv2.imshow('Mask', mask)
-cv2.imshow('Result', result)
-cv2.imshow('Result Cropped', result_cropped)
+# Canny on masked image
+canny_masked = cv2.Canny(result, 50, 200, None, 3)
+
+cdst_original = cv2.cvtColor(canny_original, cv2.COLOR_GRAY2BGR)
+cdst_masked = cv2.cvtColor(canny_masked, cv2.COLOR_GRAY2BGR)
+cdstP_original = np.copy(cdst_original)
+cdstP_masked = np.copy(cdst_masked)
+
+#display cdst
+cv2.imshow('cdst original', cdst_original)
+cv2.imshow('cdst masked', cdst_masked)
+
+
+
+
+
+def perform_hough_transform(src, dst, cdst, cdstP):
+
+    lines = cv2.HoughLines(dst, 1, np.pi / 180, 150, None, 0, 0)
+    
+    if lines is not None:
+        for i in range(0, len(lines)):
+            rho = lines[i][0][0]
+            theta = lines[i][0][1]
+            a = math.cos(theta)
+            b = math.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            pt1 = (int(x0 + 1000*(-b)), int(y0 + 1000*(a)))
+            pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
+            #printo rho and theta
+            print('here')
+            print("rho: ", rho, "theta: ", theta)
+
+            cv2.line(cdst, pt1, pt2, (0,0,255), 3, cv2.LINE_AA)
+    
+    
+    linesP = cv2.HoughLinesP(dst, 1, np.pi / 180, 50, None, 50, 10)
+    
+    if linesP is not None:
+        for i in range(0, len(linesP)):
+            l = linesP[i][0]
+            print(l)
+            cv2.line(cdstP, (l[0], l[1]), (l[2], l[3]), (0,0,255), 3, cv2.LINE_AA)
+    
+    cv2.imshow("Source", src)
+    cv2.imshow("Detected Lines (in red) - Standard Hough Line Transform", cdst)
+    cv2.imshow("Detected Lines (in red) - Probabilistic Line Transform", cdstP)
+
+
+#perform hough transform on original image
+perform_hough_transform(hough_image, canny_original, cdst_original, cdstP_original)
+#perform hough transform on masked image
+# perform_hough_transform(hough_image, canny_masked, cdst_masked, cdstP_masked)
+
+
+
+# preprocess_image = preprocess_image(hough_image)
+# lines = detect_lane_lines(preprocess_image)
+# if lines is not None:
+#     for line in lines:
+#         for x1, y1, x2, y2 in line:
+#             hough_image = cv2.line(hough_image, (x1, y1), (x2, y2), (0, 0, 255), 5)
+
+#             #show the image with the lines drawn
+#             cv2.imshow("lane lines", hough_image)
+
+
+
+# # Display the images
+# cv2.imshow('Original Image', image)
+# cv2.imshow('HSV Image', hsv_image)
+# cv2.imshow('Mask', mask)
+# cv2.imshow('Result', result)
+# cv2.imshow('Result Cropped', result_cropped)
+# #save result cropped
+# cv2.imwrite('../media/test_images/IMG_8485_result_cropped.png', result_cropped)
 
 
 
