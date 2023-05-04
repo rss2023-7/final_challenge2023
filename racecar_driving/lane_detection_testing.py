@@ -43,7 +43,7 @@ def crop_image(image):
 def perform_canny_edge_detection(image):
 
     # Canny on masked image
-    canny_masked = cv2.Canny(result_cropped, 50, 200, None, 3)
+    canny_masked = cv2.Canny(image, 50, 200, None, 3)
 
     cdst_masked = cv2.cvtColor(canny_masked, cv2.COLOR_GRAY2BGR)
 
